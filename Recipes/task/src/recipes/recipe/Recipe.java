@@ -1,8 +1,13 @@
 package recipes.recipe;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import lombok.*;
 
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+import java.util.List;
 
 @Getter
 @Setter
@@ -14,8 +19,8 @@ public class Recipe {
     private String name;
     @NotEmpty
     private String description;
-    @NotEmpty
-    private String ingredients;
-    @NotEmpty
-    private String directions;
+    @NotNull
+    private List<String> ingredients;
+    @NotNull
+    private List<String> directions;
 }

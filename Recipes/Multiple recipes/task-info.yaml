@@ -193,6 +193,100 @@ files:
         }
     }
   learner_created: false
+- name: src/recipes/recipe/Recipe.java
+  visible: true
+  text: |
+    package recipes.recipe;
+
+    import lombok.*;
+
+    import javax.validation.constraints.NotEmpty;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder(toBuilder = true)
+    public class Recipe {
+        @NotEmpty
+        private String name;
+        @NotEmpty
+        private String description;
+        @NotEmpty
+        private String ingredients;
+        @NotEmpty
+        private String directions;
+    }
+  learner_created: true
+- name: src/recipes/configuration/Configuration.java
+  visible: true
+  text: |
+    package recipes.configuration;
+
+    import com.google.gson.Gson;
+    import com.google.gson.GsonBuilder;
+    import org.springframework.context.annotation.Bean;
+
+    @org.springframework.context.annotation.Configuration
+    public class Configuration {
+        @Bean
+        public Gson getGson() {
+            return new GsonBuilder()
+                    .setPrettyPrinting()
+                    .create();
+        }
+    }
+  learner_created: true
+- name: src/recipes/RecipesController.java
+  visible: true
+  text: |
+    package recipes;
+
+    import com.google.gson.Gson;
+    import com.google.gson.JsonObject;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.validation.Errors;
+    import org.springframework.web.bind.annotation.GetMapping;
+    import org.springframework.web.bind.annotation.PostMapping;
+    import org.springframework.web.bind.annotation.RequestBody;
+    import org.springframework.web.bind.annotation.RestController;
+    import org.springframework.web.server.ResponseStatusException;
+    import recipes.recipe.Recipe;
+    import javax.validation.Valid;
+
+    @RestController
+    public class RecipesController {
+        @Autowired
+        Gson gson;
+
+        private Recipe recipe = null;
+
+        @PostMapping("/api/recipe")
+        ResponseEntity<String> setRecipe(@Valid @RequestBody Recipe recipe, Errors errors) {
+            if (errors.hasErrors()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "One or more fields is empty.");
+            }
+            this.recipe = recipe.toBuilder().build();
+            JsonObject response = new JsonObject();
+            response.addProperty("status", "Recipe changed!");
+            return new ResponseEntity<>(gson.toJson(response), HttpStatus.OK);
+        }
+
+        @GetMapping("/api/recipe")
+        ResponseEntity<String> getRecipe() {
+            return new ResponseEntity<>(gson.toJson(recipe == null ? new JsonObject() : recipe),
+                    HttpStatus.OK);
+        }
+    }
+  learner_created: true
+- name: src/recipes/recipe/RecipeStore.java
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/projects/180/stages/918/implement#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Congratulations!
+  time: Mon, 25 Apr 2022 14:02:18 UTC
 record: -1
