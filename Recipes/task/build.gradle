@@ -14,6 +14,32 @@ apply plugin: 'java'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 
+jar {
+    manifest {
+        attributes "Main-Class": "recipes.RecipesApplication"
+    }
+    duplicatesStrategy "exclude"
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes "Main-Class": "recipes.RecipesApplication"
+    }
+    archiveClassifier = "all"
+    duplicatesStrategy "exclude"
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    with jar
+}
+
 repositories {
     mavenCentral()
 }
