@@ -31,3 +31,9 @@ The new structure of a recipe includes the same 4 fields, but the type of two of
 "ingredients": ["1 inch ginger root, minced", "1/2 lemon, juiced", "1/2 teaspoon manuka honey"],</br>
 "directions": ["Place all ingredients in a mug and fill with warm water (not too hot so you keep the beneficial honey compounds in tact)", "Steep for 5-10 minutes", "Drink and enjoy"]</br>
 }
+
+<b>In third stage</b> implemented one of the main features of the service – connect the service to a database and store 
+the recipes there.
+
+Implemented a new DELETE /api/recipe/{id} endpoint. It deletes a recipe with a specified {id}. The server should respond
+with the 204 (No Content) status code. If a recipe with a specified id does not exist, the server should return 404 (Not found);
