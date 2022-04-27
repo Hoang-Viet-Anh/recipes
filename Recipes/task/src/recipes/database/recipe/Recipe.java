@@ -1,11 +1,12 @@
 package recipes.database.recipe;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import lombok.*;
-
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -35,4 +36,26 @@ public class Recipe {
     @Convert(converter = ListToStringConverter.class)
     @Column(name = "directions")
     private List<String> directions;
+
+    @NotBlank
+    @Column(name = "category")
+    private String category;
+
+    @Column(name = "date")
+    private LocalDateTime date = LocalDateTime.now();
+
+    public JsonObject toJsonObject() {
+        JsonObject response = new JsonObject();
+        response.addProperty("name", getName());
+        response.addProperty("category", getCategory());
+        response.addProperty("date", getDate().toString());
+        response.addProperty("description", getDescription());
+        JsonArray array = new JsonArray();
+        getIngredients().forEach(array::add);
+        response.add("ingredients", array);
+        array = new JsonArray();
+        getDirections().forEach(array::add);
+        response.add("directions", array);
+        return response;
+    }
 }

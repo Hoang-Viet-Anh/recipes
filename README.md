@@ -37,3 +37,15 @@ the recipes there.
 
 Implemented a new DELETE /api/recipe/{id} endpoint. It deletes a recipe with a specified {id}. The server should respond
 with the 204 (No Content) status code. If a recipe with a specified id does not exist, the server should return 404 (Not found);
+
+<b>In fourth stage</b> added two additional fields: <b>category</b> and <b>date</b>. Also added two endpoints:
+
+PUT /api/recipe/{id} receives a recipe as a JSON object and updates a recipe with a specified id. Also, update the date field too. The server should return the 204 (No Content) status code. If a recipe with a specified id does not exist, the server should return 404 (Not found). The server should respond with 400 (Bad Request) if a recipe doesn't follow the restrictions indicated above (all fields are required, string fields can't be blank, arrays should have at least one item);
+
+GET /api/recipe/search takes one of the two mutually exclusive query parameters:
+
+1.category – if this parameter is specified, it returns a JSON array of all recipes of the specified category. Search is case-insensitive, sort the recipes by date (newer first);
+
+2.name – if this parameter is specified, it returns a JSON array of all recipes with the names that contain the specified parameter. Search is case-insensitive, sort the recipes by date (newer first).
+
+If no recipes are found, the program should return an empty JSON array. If 0 parameters were passed, or more than 1, the server should return 400 (Bad Request). The same response should follow if the specified parameters are not valid. If everything is correct, it should return 200 (Ok).

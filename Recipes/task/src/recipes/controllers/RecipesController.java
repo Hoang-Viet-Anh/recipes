@@ -13,6 +13,7 @@ import recipes.database.recipe.Recipe;
 import recipes.database.recipe.RecipeService;
 
 import javax.validation.Valid;
+import java.util.Map;
 
 @RestController
 public class RecipesController {
@@ -39,16 +40,7 @@ public class RecipesController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipe with specified id not found.");
         } else {
             Recipe recipe = recipeService.getRecipeById(id);
-            JsonObject response = new JsonObject();
-            response.addProperty("name", recipe.getName());
-            response.addProperty("description", recipe.getDescription());
-            JsonArray array = new JsonArray();
-            recipe.getIngredients().forEach(array::add);
-            response.add("ingredients", array);
-            array = new JsonArray();
-            recipe.getDirections().forEach(array::add);
-            response.add("directions", array);
-            return new ResponseEntity<>(gson.toJson(response), HttpStatus.OK);
+            return new ResponseEntity<>(gson.toJson(recipe.toJsonObject()), HttpStatus.OK);
         }
     }
 
@@ -61,5 +53,39 @@ public class RecipesController {
         JsonObject object = new JsonObject();
         object.addProperty("status", "success!");
         return new ResponseEntity<>(gson.toJson(object), HttpStatus.NO_CONTENT);
+    }
+
+    @PutMapping("/api/recipe/{id}")
+    ResponseEntity<String> updateRecipe(@PathVariable long id, @Valid @RequestBody Recipe recipe, Errors errors) {
+        if (errors.hasErrors()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errors.getFieldError().getDefaultMessage());
+        } else if (!recipeService.recipeExistsById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipe with specified id not found.");
+        } else {
+            recipe.setId(id);
+            recipeService.saveRecipe(recipe);
+            JsonObject object = new JsonObject();
+            object.addProperty("status", "success!");
+            return new ResponseEntity<>(gson.toJson(object), HttpStatus.NO_CONTENT);
+        }
+    }
+
+    @GetMapping("/api/recipe/search")
+    ResponseEntity<String> getSpecifiedRecipes(@RequestParam Map<String, String> params) {
+        if (params.size() != 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only one parameter should be passed.");
+        } else if (!(params.containsKey("category") || params.containsKey("name"))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Wrong parameters.");
+        } else {
+            JsonArray array = new JsonArray();
+            if (params.containsKey("category")) {
+                recipeService.getRecipeByCategory(params.get("category"))
+                        .forEach(a -> array.add(a.toJsonObject()));
+            } else if (params.containsKey("name")) {
+                recipeService.getBySpecifiedName(params.get("name"))
+                        .forEach(a -> array.add(a.toJsonObject()));
+            }
+            return new ResponseEntity<>(gson.toJson(array), HttpStatus.OK);
+        }
     }
 }
