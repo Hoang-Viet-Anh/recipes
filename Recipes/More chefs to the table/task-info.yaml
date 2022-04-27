@@ -814,6 +814,302 @@ files:
         }
     }
   learner_created: false
+- name: src/recipes/database/recipe/ListToStringConverter.java
+  visible: true
+  text: |-
+    package recipes.database.recipe;
+
+    import javax.persistence.AttributeConverter;
+    import javax.persistence.Converter;
+    import java.util.Arrays;
+    import java.util.Collections;
+    import java.util.List;
+    import java.util.stream.Collectors;
+
+    @Converter
+    public class ListToStringConverter implements AttributeConverter<List<String>, String> {
+        @Override
+        public String convertToDatabaseColumn(List<String> attribute) {
+            return attribute == null ?
+                    null : String.join(";", attribute);
+        }
+
+        @Override
+        public List<String> convertToEntityAttribute(String dbData) {
+            return dbData == null ? Collections.emptyList() :
+                    Arrays.stream(dbData.split(";"))
+                            .collect(Collectors.toList());
+        }
+    }
+  learner_created: true
+- name: src/recipes/database/recipe/RecipeService.java
+  visible: true
+  text: |
+    package recipes.database.recipe;
+
+    import lombok.AllArgsConstructor;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
+
+    import java.util.List;
+
+    @AllArgsConstructor
+    @Service
+    public class RecipeService {
+        @Autowired
+        private final RecipeRepository recipeRepository;
+
+        public Recipe saveRecipe(Recipe recipe) {
+            return recipeRepository.save(recipe);
+        }
+
+        public boolean recipeExistsById(long id) {
+            return recipeRepository.existsById(id);
+        }
+
+        public Recipe getRecipeById(long id) {
+            return recipeRepository.findById(id).get();
+        }
+
+        public void deleteRecipeById(long id) {
+            recipeRepository.deleteById(id);
+        }
+
+        public boolean existsByNameAndDesc(String name, String desc) {
+            return recipeRepository.existsByNameAndDescription(name, desc);
+        }
+
+        public List<Recipe> getRecipeByCategory(String category) {
+            return recipeRepository.findByCategoryIgnoreCaseOrderByDateDesc(category);
+        }
+
+        public List<Recipe> getBySpecifiedName(String name) {
+            return recipeRepository.findByNameContainingIgnoreCaseOrderByDateDesc(name);
+        }
+    }
+  learner_created: true
+- name: src/recipes/configuration/Configuration.java
+  visible: true
+  text: |
+    package recipes.configuration;
+
+    import com.google.gson.Gson;
+    import com.google.gson.GsonBuilder;
+    import org.springframework.context.annotation.Bean;
+
+    @org.springframework.context.annotation.Configuration
+    public class Configuration {
+        @Bean
+        public Gson getGson() {
+            return new GsonBuilder()
+                    .setPrettyPrinting()
+                    .create();
+        }
+    }
+  learner_created: true
+- name: src/recipes/database/recipe/Recipe.java
+  visible: true
+  text: |
+    package recipes.database.recipe;
+
+    import com.google.gson.JsonArray;
+    import com.google.gson.JsonObject;
+    import lombok.*;
+    import javax.persistence.*;
+    import javax.validation.constraints.NotBlank;
+    import javax.validation.constraints.NotEmpty;
+    import java.time.LocalDateTime;
+    import java.util.List;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @Entity
+    @Table(name = "recipes")
+    public class Recipe {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private long id;
+
+        @NotBlank
+        @Column(name = "name")
+        private String name;
+
+        @NotBlank
+        @Column(name = "description")
+        private String description;
+
+        @NotEmpty
+        @Convert(converter = ListToStringConverter.class)
+        @Column(name = "ingredients")
+        private List<String> ingredients;
+
+        @NotEmpty
+        @Convert(converter = ListToStringConverter.class)
+        @Column(name = "directions")
+        private List<String> directions;
+
+        @NotBlank
+        @Column(name = "category")
+        private String category;
+
+        @Column(name = "date")
+        private LocalDateTime date = LocalDateTime.now();
+
+        public JsonObject toJsonObject() {
+            JsonObject response = new JsonObject();
+            response.addProperty("name", getName());
+            response.addProperty("category", getCategory());
+            response.addProperty("date", getDate().toString());
+            response.addProperty("description", getDescription());
+            JsonArray array = new JsonArray();
+            getIngredients().forEach(array::add);
+            response.add("ingredients", array);
+            array = new JsonArray();
+            getDirections().forEach(array::add);
+            response.add("directions", array);
+            return response;
+        }
+    }
+  learner_created: true
+- name: src/recipes/controllers/RecipesController.java
+  visible: true
+  text: |
+    package recipes.controllers;
+
+    import com.google.gson.Gson;
+    import com.google.gson.JsonArray;
+    import com.google.gson.JsonObject;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.http.HttpStatus;
+    import org.springframework.http.ResponseEntity;
+    import org.springframework.validation.Errors;
+    import org.springframework.web.bind.annotation.*;
+    import org.springframework.web.server.ResponseStatusException;
+    import recipes.database.recipe.Recipe;
+    import recipes.database.recipe.RecipeService;
+
+    import javax.validation.Valid;
+    import java.util.Map;
+
+    @RestController
+    public class RecipesController {
+        @Autowired
+        private Gson gson;
+
+        @Autowired
+        private RecipeService recipeService;
+
+        @PostMapping("/api/recipe/new")
+        ResponseEntity<String> addRecipe(@Valid @RequestBody Recipe recipe, Errors errors) {
+            if (errors.hasErrors()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "One or more fields is empty.");
+            }
+            Recipe addedRecipe = recipeService.saveRecipe(recipe);
+            JsonObject response = new JsonObject();
+            response.addProperty("id", addedRecipe.getId());
+            return new ResponseEntity<>(gson.toJson(response), HttpStatus.OK);
+        }
+
+        @GetMapping("/api/recipe/{id}")
+        ResponseEntity<String> getRecipe(@PathVariable long id) {
+            if (!recipeService.recipeExistsById(id)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipe with specified id not found.");
+            } else {
+                Recipe recipe = recipeService.getRecipeById(id);
+                return new ResponseEntity<>(gson.toJson(recipe.toJsonObject()), HttpStatus.OK);
+            }
+        }
+
+        @DeleteMapping("/api/recipe/{id}")
+        ResponseEntity<String> deteleRecipe(@PathVariable long id) {
+            if (!recipeService.recipeExistsById(id)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipe with specified id not found.");
+            }
+            recipeService.deleteRecipeById(id);
+            JsonObject object = new JsonObject();
+            object.addProperty("status", "success!");
+            return new ResponseEntity<>(gson.toJson(object), HttpStatus.NO_CONTENT);
+        }
+
+        @PutMapping("/api/recipe/{id}")
+        ResponseEntity<String> updateRecipe(@PathVariable long id, @Valid @RequestBody Recipe recipe, Errors errors) {
+            if (errors.hasErrors()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errors.getFieldError().getDefaultMessage());
+            } else if (!recipeService.recipeExistsById(id)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipe with specified id not found.");
+            } else {
+                recipe.setId(id);
+                recipeService.saveRecipe(recipe);
+                JsonObject object = new JsonObject();
+                object.addProperty("status", "success!");
+                return new ResponseEntity<>(gson.toJson(object), HttpStatus.NO_CONTENT);
+            }
+        }
+
+        @GetMapping("/api/recipe/search")
+        ResponseEntity<String> getSpecifiedRecipes(@RequestParam Map<String, String> params) {
+            if (params.size() != 1) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only one parameter should be passed.");
+            } else if (!(params.containsKey("category") || params.containsKey("name"))) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Wrong parameters.");
+            } else {
+                JsonArray array = new JsonArray();
+                if (params.containsKey("category")) {
+                    recipeService.getRecipeByCategory(params.get("category"))
+                            .forEach(a -> array.add(a.toJsonObject()));
+                } else if (params.containsKey("name")) {
+                    recipeService.getBySpecifiedName(params.get("name"))
+                            .forEach(a -> array.add(a.toJsonObject()));
+                }
+                return new ResponseEntity<>(gson.toJson(array), HttpStatus.OK);
+            }
+        }
+    }
+  learner_created: true
+- name: src/recipes/database/recipe/RecipeRepository.java
+  visible: true
+  text: |
+    package recipes.database.recipe;
+
+    import org.springframework.data.repository.CrudRepository;
+    import org.springframework.stereotype.Repository;
+
+    import java.util.List;
+
+    @Repository
+    public interface RecipeRepository extends CrudRepository<Recipe, Long> {
+        boolean existsById(long id);
+        boolean existsByNameAndDescription(String name, String description);
+        List<Recipe> findByCategoryIgnoreCaseOrderByDateDesc(String category);
+        List<Recipe> findByNameContainingIgnoreCaseOrderByDateDesc(String name);
+    }
+  learner_created: true
+- name: src/recipes/database/user/User.java
+  visible: true
+  learner_created: true
+- name: src/recipes/database/user/UserService.java
+  visible: true
+  learner_created: true
+- name: src/recipes/database/user/UserRepository.java
+  visible: true
+  learner_created: true
+- name: src/recipes/security/WebSecurityConfigurerImpl.java
+  visible: true
+  learner_created: true
+- name: src/recipes/security/UserDetailsServiceImpl.java
+  visible: true
+  learner_created: true
+- name: src/recipes/security/UserDetailsImpl.java
+  visible: true
+  learner_created: true
+- name: src/recipes/controllers/RegisterController.java
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/learn/step/13092#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Well done! You've finished the project. Select a new project on <a href="https://hyperskill.org/projects">JetBrains
+    Academy</a> to continue learning.
+  time: Wed, 27 Apr 2022 14:49:23 UTC
 record: -1

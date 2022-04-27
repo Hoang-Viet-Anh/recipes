@@ -49,3 +49,11 @@ GET /api/recipe/search takes one of the two mutually exclusive query parameters:
 2.name – if this parameter is specified, it returns a JSON array of all recipes with the names that contain the specified parameter. Search is case-insensitive, sort the recipes by date (newer first).
 
 If no recipes are found, the program should return an empty JSON array. If 0 parameters were passed, or more than 1, the server should return 400 (Bad Request). The same response should follow if the specified parameters are not valid. If everything is correct, it should return 200 (Ok).
+
+<b>In fifth stage</b> added following functionality:
+
+New endpoint POST /api/register receives a JSON object with two fields: email (string), and password (string). If a user with a specified email does not exist, the program saves (registers) the user in a database and responds with 200 (Ok). If a user is already in the database, respond with the 400 (Bad Request) status code. Both fields are required and must be valid: email should contain @ and . symbols, password should contain at least 8 characters and shouldn't be blank. If the fields do not meet these restrictions, the service should respond with 400 (Bad Request). Also, do not forget to use an encoder before storing a password in a database. BCryptPasswordEncoder is a good choice.
+
+Include the Spring Boot Security dependency and configure access to the endpoints – all implemented endpoints (except /api/register) should be available only to the registered and then authenticated and authorized via HTTP Basic auth users. Otherwise, the server should respond with the 401 (Unauthorized) status code.
+
+Add additional restrictions – only an author of a recipe can delete or update a recipe. If a user is not the author of a recipe, but they try to carry out the actions mentioned above, the service should respond with the 403 (Forbidden) status code.

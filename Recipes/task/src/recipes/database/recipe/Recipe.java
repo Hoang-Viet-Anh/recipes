@@ -3,6 +3,8 @@ package recipes.database.recipe;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import lombok.*;
+import recipes.database.user.User;
+
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
@@ -43,6 +45,11 @@ public class Recipe {
 
     @Column(name = "date")
     private LocalDateTime date = LocalDateTime.now();
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
 
     public JsonObject toJsonObject() {
         JsonObject response = new JsonObject();

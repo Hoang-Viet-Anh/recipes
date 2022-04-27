@@ -6,11 +6,14 @@ import com.google.gson.JsonObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import recipes.database.recipe.Recipe;
 import recipes.database.recipe.RecipeService;
+import recipes.database.user.User;
+import recipes.database.user.UserService;
 
 import javax.validation.Valid;
 import java.util.Map;
@@ -23,11 +26,16 @@ public class RecipesController {
     @Autowired
     private RecipeService recipeService;
 
+    @Autowired
+    private UserService userService;
+
     @PostMapping("/api/recipe/new")
-    ResponseEntity<String> addRecipe(@Valid @RequestBody Recipe recipe, Errors errors) {
+    ResponseEntity<String> addRecipe(Authentication auth, @Valid @RequestBody Recipe recipe, Errors errors) {
         if (errors.hasErrors()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "One or more fields is empty.");
         }
+        User user = userService.getUserByEmail(auth.getName());
+        recipe.setUser(user);
         Recipe addedRecipe = recipeService.saveRecipe(recipe);
         JsonObject response = new JsonObject();
         response.addProperty("id", addedRecipe.getId());
@@ -45,9 +53,14 @@ public class RecipesController {
     }
 
     @DeleteMapping("/api/recipe/{id}")
-    ResponseEntity<String> deteleRecipe(@PathVariable long id) {
+    ResponseEntity<String> deteleRecipe(Authentication auth, @PathVariable long id) {
+        User user = userService.getUserByEmail(auth.getName());
         if (!recipeService.recipeExistsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipe with specified id not found.");
+        }
+        Recipe recipe = recipeService.getRecipeById(id);
+        if (!recipe.getUser().equals(user)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         recipeService.deleteRecipeById(id);
         JsonObject object = new JsonObject();
@@ -56,13 +69,19 @@ public class RecipesController {
     }
 
     @PutMapping("/api/recipe/{id}")
-    ResponseEntity<String> updateRecipe(@PathVariable long id, @Valid @RequestBody Recipe recipe, Errors errors) {
+    ResponseEntity<String> updateRecipe(Authentication auth, @PathVariable long id, @Valid @RequestBody Recipe recipe, Errors errors) {
+        User user = userService.getUserByEmail(auth.getName());
         if (errors.hasErrors()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, errors.getFieldError().getDefaultMessage());
         } else if (!recipeService.recipeExistsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Recipe with specified id not found.");
         } else {
+            Recipe recipe1 = recipeService.getRecipeById(id);
+            if (!recipe1.getUser().equals(user)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
             recipe.setId(id);
+            recipe.setUser(recipe1.getUser());
             recipeService.saveRecipe(recipe);
             JsonObject object = new JsonObject();
             object.addProperty("status", "success!");
